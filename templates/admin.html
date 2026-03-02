@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixxod Admin - Portföy & Kategori Yönetimi</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        :root { --p-green: #18d26e; --p-dark: #0a0a0a; --p-card: #141414; }
+        body { background-color: var(--p-dark); color: #fff; padding: 40px 0; font-family: 'Poppins', sans-serif; }
+        
+        .admin-card { background: var(--p-card); border: 1px solid #222; padding: 25px; border-radius: 15px; margin-bottom: 30px; }
+        .btn-pixxod { background-color: var(--p-green); color: #000; font-weight: 600; border: none; transition: 0.3s; }
+        .btn-bulk-delete { background-color: #dc3545; color: white; border: none; display: none; font-weight: 600; }
+        
+        .nav-tabs { border-bottom: 1px solid #222; margin-bottom: 25px; }
+        .nav-tabs .nav-link { color: #666 !important; border: none !important; font-weight: 600; padding: 12px 25px; }
+        .nav-tabs .nav-link.active { background-color: transparent !important; color: var(--p-green) !important; border-bottom: 3px solid var(--p-green) !important; }
+
+        /* Giriş Alanları: Yazı Beyaz */
+        .form-control, .form-select { background-color: #1a1a1a; border: 1px solid #333; color: #ffffff !important; }
+        .form-control:focus, .form-select:focus { background-color: #1a1a1a; color: #ffffff; border-color: var(--p-green); box-shadow: none; }
+
+        /* Etiketler: Gri */
+        .admin-card label { color: #adb5bd !important; font-weight: 500; margin-bottom: 4px; }
+        
+        .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--p-green); }
+        .handle { cursor: grab; color: var(--p-green); font-size: 20px; padding: 5px 10px; }
+        .pagination .page-link { background-color: #1a1a1a !important; border: 1px solid #333 !important; color: #fff !important; }
+        .pagination .page-item.active .page-link { background-color: var(--p-green) !important; border-color: var(--p-green) !important; color: #000 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="admin-card">
+                <h5 style="color: var(--p-green);"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Çoklu Yükle</h5>
+                <form method="POST" enctype="multipart/form-data">
+                    <div id="upload-items">
+                        <div class="upload-item border-bottom border-secondary mb-3 pb-3">
+                            <input type="text" name="title[]" class="form-control mb-2" placeholder="Başlık" required>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <select name="category[]" class="form-select">
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.name }}">{{ cat.name|capitalize }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select name="media_type[]" class="form-select">
+                                        <option value="photo">Fotoğraf</option>
+                                        <option value="video">Video</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2"><label class="small">Ana Dosya</label><input type="file" name="file[]" class="form-control" required></div>
+                            <div class="mb-2"><label class="small">Kapak (Sadece Video)</label><input type="file" name="poster[]" class="form-control"></div>
+                            <input type="number" name="sort_order[]" class="form-control mb-2" placeholder="Sıra No">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-info btn-sm w-100 mb-3" onclick="yeniAlanEkle()">+ Dosya Ekle</button>
+                    <button type="submit" class="btn btn-pixxod w-100 py-2">TÜMÜNÜ YÜKLE</button>
+                </form>
+
+                <hr class="border-secondary my-4">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm py-2"><i class="bi bi-arrow-left-circle me-2"></i>Siteye Geri Dön</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm py-2"><i class="bi bi-box-arrow-right me-2"></i>Güvenli Çıkış</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="admin-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0" style="color: var(--p-green);"><i class="bi bi-stack me-2"></i>İçerik Yönetimi</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="btn-bulk-delete" class="btn btn-bulk-delete px-3" onclick="confirmDelete()">Seçilenleri Sil</button>
+                        <button type="submit" form="bulk-update-form" class="btn btn-pixxod px-4 shadow">KAYDET</button>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="photo-tab" data-bs-toggle="tab" data-bs-target="#photo-content" type="button" role="tab">Fotoğraflar ({{ p_total_count }})</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video-content" type="button" role="tab">Videolar ({{ v_total_count }})</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-content" type="button" role="tab">Kategoriler</button>
+                    </li>
+                </ul>
+
+                <form id="delete-form" action="{{ url_for('delete_selected') }}" method="POST">
+                    <div class="tab-content" id="adminTabsContent">
+                        
+                        <div class="tab-pane fade show active" id="photo-content" role="tabpanel">
+                            <table class="table table-dark align-middle">
+                                <thead><tr><th><input type="checkbox" class="form-check-input select-all" data-target="photo"></th><th>Sıra</th><th>Medya</th><th>Başlık</th><th>Kategori</th><th class="text-end">İşlem</th></tr></thead>
+                                <tbody id="sortable-photos">
+                                    {% for item in photos %}
+                                    <tr>
+                                        <td><input type="checkbox" name="selected_items" value="{{ item.id }}" class="form-check-input photo-cb item-checkbox"></td>
+                                        <td><i class="bi bi-grip-vertical handle"></i></td>
+                                        <td><input type="hidden" name="item_id" value="{{ item.id }}" form="bulk-update-form"><img src="{{ url_for('static', filename=item.url) }}" class="img-preview"></td>
+                                        <td><input type="text" name="item_title" class="form-control form-control-sm" value="{{ item.title }}" form="bulk-update-form"></td>
+                                        <td>
+                                            <select name="item_category" class="form-select form-select-sm" form="bulk-update-form">
+                                                {% for cat in categories %}
+                                                <option value="{{ cat.name }}" {% if item.category == cat.name %}selected{% endif %}>{{ cat.name|capitalize }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td class="text-end"><a href="{{ url_for('delete_item', item_id=item.id) }}" class="text-danger" onclick="return confirm('Silinsin mi?')"><i class="bi bi-trash-fill"></i></a></td>
+                                        <input type="hidden" name="item_sort_order" class="sort-input" value="{{ item.sort_order }}" form="bulk-update-form">
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if p_total_pages > 1 %}
+                            <nav class="mt-3">
+                                <ul class="pagination pagination-sm justify-content-center">
+                                    <li class="page-item {% if p_page == 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('admin', p_page=p_page-1, v_page=v_page, tab='photo') }}"><i class="bi bi-chevron-left"></i></a></li>
+                                    {% for p in range(1, p_total_pages + 1) %}<li class="page-item {% if p == p_page %}active{% endif %}"><a class="page-link" href="{{ url_for('admin', p_page=p, v_page=v_page, tab='photo') }}">{{ p }}</a></li>{% endfor %}
+                                    <li class="page-item {% if p_page == p_total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('admin', p_page=p_page+1, v_page=v_page, tab='photo') }}"><i class="bi bi-chevron-right"></i></a></li>
+                                </ul>
+                            </nav>
+                            {% endif %}
+                        </div>
+
+                        <div class="tab-pane fade" id="video-content" role="tabpanel">
+                            <table class="table table-dark align-middle">
+                                <thead><tr><th><input type="checkbox" class="form-check-input select-all" data-target="video"></th><th>Sıra</th><th>Medya</th><th>Başlık</th><th>Kategori</th><th class="text-end">İşlem</th></tr></thead>
+                                <tbody id="sortable-videos">
+                                    {% for item in videos %}
+                                    <tr>
+                                        <td><input type="checkbox" name="selected_items" value="{{ item.id }}" class="form-check-input video-cb item-checkbox"></td>
+                                        <td><i class="bi bi-grip-vertical handle"></i></td>
+                                        <td><input type="hidden" name="item_id" value="{{ item.id }}" form="bulk-update-form">{% if item.poster %}<img src="{{ url_for('static', filename=item.poster) }}" class="img-preview">{% else %}<i class="bi bi-play-circle-fill fs-3 text-info"></i>{% endif %}</td>
+                                        <td><input type="text" name="item_title" class="form-control form-control-sm" value="{{ item.title }}" form="bulk-update-form"></td>
+                                        <td>
+                                            <select name="item_category" class="form-select form-select-sm" form="bulk-update-form">
+                                                {% for cat in categories %}
+                                                <option value="{{ cat.name }}" {% if item.category == cat.name %}selected{% endif %}>{{ cat.name|capitalize }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td class="text-end"><a href="{{ url_for('delete_item', item_id=item.id) }}" class="text-danger" onclick="return confirm('Silinsin mi?')"><i class="bi bi-trash-fill"></i></a></td>
+                                        <input type="hidden" name="item_sort_order" class="sort-input" value="{{ item.sort_order }}" form="bulk-update-form">
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if v_total_pages > 1 %}
+                            <nav class="mt-3">
+                                <ul class="pagination pagination-sm justify-content-center">
+                                    <li class="page-item {% if v_page == 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('admin', v_page=v_page-1, p_page=p_page, tab='video') }}"><i class="bi bi-chevron-left"></i></a></li>
+                                    {% for p in range(1, v_total_pages + 1) %}<li class="page-item {% if p == v_page %}active{% endif %}"><a class="page-link" href="{{ url_for('admin', v_page=p, p_page=p_page, tab='video') }}">{{ p }}</a></li>{% endfor %}
+                                    <li class="page-item {% if v_page == v_total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('admin', v_page=v_page+1, p_page=p_page, tab='video') }}"><i class="bi bi-chevron-right"></i></a></li>
+                                </ul>
+                            </nav>
+                            {% endif %}
+                        </div>
+
+                        <div class="tab-pane fade" id="category-content" role="tabpanel">
+                            <div class="mb-4">
+                                <div class="input-group">
+                                    <input type="text" id="categoryInput" name="category_name" class="form-control" placeholder="Yeni Kategori Adı (Örn: wedding)">
+                                    <button class="btn btn-pixxod px-4" type="button" onclick="kategoriEkle()">KATEGORİ EKLE</button>
+                                </div>
+                            </div>
+                            
+                            <table class="table table-dark align-middle">
+                                <thead><tr><th>Kategori Adı</th><th class="text-end">İşlem</th></tr></thead>
+                                <tbody>
+                                    {% for cat in categories %}
+                                    <tr>
+                                        <td class="text-white">{{ cat.name|capitalize }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('delete_category', cat_id=cat.id) }}" class="text-danger" onclick="return confirm('Silinsin mi?')">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+                <form id="bulk-update-form" action="{{ url_for('update_all') }}" method="POST" style="display:none;"></form>
+                
+                <form id="hiddenCategoryForm" action="{{ url_for('add_category') }}" method="POST" style="display:none;">
+                    <input type="hidden" name="category_name" id="hiddenCategoryInput">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Kategori ekleme fonksiyonu (Daha güvenli tetikleme için)
+    function kategoriEkle() {
+        const val = document.getElementById('categoryInput').value.trim();
+        if (val) {
+            document.getElementById('hiddenCategoryInput').value = val;
+            document.getElementById('hiddenCategoryForm').submit();
+        } else {
+            alert("Lütfen bir kategori adı girin.");
+        }
+    }
+
+    function yeniAlanEkle() {
+        const container = document.getElementById('upload-items');
+        const div = document.createElement('div');
+        div.className = "upload-item border-bottom border-secondary mb-3 pb-3";
+        div.innerHTML = `
+            <div class="d-flex justify-content-between mb-2"><label class="small text-info">Yeni Medya</label><button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()" style="font-size:0.7rem"></button></div>
+            <input type="text" name="title[]" class="form-control mb-2" placeholder="Başlık" required>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <select name="category[]" class="form-select">
+                        {% for cat in categories %}<option value="{{ cat.name }}">{{ cat.name|capitalize }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-6"><select name="media_type[]" class="form-select"><option value="photo">Fotoğraf</option><option value="video">Video</option></select></div>
+            </div>
+            <div class="mb-2"><label class="small">Ana Dosya</label><input type="file" name="file[]" class="form-control" required></div>
+            <div class="mb-2"><label class="small">Kapak (Sadece Video)</label><input type="file" name="poster[]" class="form-control"></div>
+            <input type="number" name="sort_order[]" class="form-control" placeholder="Sıra No">`;
+        container.appendChild(div);
+    }
+
+    window.addEventListener('load', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeTab = urlParams.get('tab');
+        
+        if (activeTab) {
+            const tabBtn = document.querySelector('#' + activeTab + '-tab');
+            if (tabBtn) { 
+                bootstrap.Tab.getOrCreateInstance(tabBtn).show(); 
+            }
+        }
+
+        document.querySelectorAll('.select-all').forEach(master => {
+            master.addEventListener('change', function() {
+                document.querySelectorAll('.' + this.dataset.target + '-cb').forEach(cb => { cb.checked = this.checked; });
+                updateDeleteBtn();
+            });
+        });
+
+        document.addEventListener('change', e => { if (e.target.classList.contains('item-checkbox')) updateDeleteBtn(); });
+    });
+
+    function updateDeleteBtn() {
+        const count = document.querySelectorAll('.item-checkbox:checked').length;
+        const btn = document.getElementById('btn-bulk-delete');
+        if (btn) { btn.style.display = count > 0 ? 'block' : 'none'; btn.innerHTML = `<i class="bi bi-trash3-fill me-2"></i>Seçilenleri Sil (${count})`; }
+    }
+
+    function confirmDelete() { if (confirm("Kalıcı olarak silinecek. Emin misiniz?")) { document.getElementById('delete-form').submit(); } }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const setupSortable = (id, page) => {
+            const el = document.getElementById(id);
+            if (el) { Sortable.create(el, { handle: '.handle', animation: 150, onEnd: function () { let start = ((page - 1) * 10) + 1; el.querySelectorAll('.sort-input').forEach((input, i) => { input.value = start + i; }); } }); }
+        };
+        setupSortable('sortable-photos', parseInt("{{ p_page }}") || 1);
+        setupSortable('sortable-videos', parseInt("{{ v_page }}") || 1);
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

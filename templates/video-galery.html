@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Video Gallery - Pixxod</title>
+
+  <link href="{{ url_for('static', filename='assets/vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/css/main.css') }}" rel="stylesheet">
+
+  <style>
+    #header { background-color: rgba(0, 0, 0, 0.95) !important; }
+    main { margin-top: 100px; background-color: #000; min-height: 100vh; color: #fff; }
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; padding: 20px 0; }
+    .video-karti { position: relative; background: #000; cursor: pointer; aspect-ratio: 16/9; overflow: hidden; }
+    .video-karti video { width: 100%; height: 100%; object-fit: cover; transition: 0.4s ease; }
+    .video-karti:hover video { filter: blur(8px) brightness(0.5); transform: scale(1.05); }
+    .video-info-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.4s; z-index: 2; }
+    .video-info-overlay h4 { color: #fff; font-weight: 700; text-transform: uppercase; }
+    .video-karti:hover .video-info-overlay { opacity: 1; }
+    .video-box { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .video-box video { max-width: 95%; max-height: 85%; }
+    .kapat { position: absolute; top: 30px; right: 40px; font-size: 50px; color: #fff; cursor: pointer; }
+  </style>
+</head>
+
+<body>
+  <header id="header" class="header d-flex align-items-center fixed-top">
+    <div class="container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
+      <a href="{{ url_for('index') }}" class="logo d-flex align-items-center"><h1 class="sitename">Pixxod</h1></a>
+      <nav id="navmenu" class="navmenu">
+        <ul>
+          <li><a href="{{ url_for('index') }}">Home</a></li>
+          <li><a href="{{ url_for('about') }}">About</a></li>
+          <li class="dropdown"><a href="#" class="active"><span>Works</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+            <ul>
+              <li><a href="{{ url_for('portfolio') }}">Photography</a></li>
+              <li><a href="{{ url_for('video_gallery') }}">Video Gallery</a></li>
+            </ul>
+          </li>
+          <li><a href="{{ url_for('contact') }}">Contact</a></li>
+        </ul>
+        <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container text-center mb-5">
+      <h1 class="fw-bold">VIDEO GALLERY</h1>
+    </div>
+
+    <div class="container">
+      <div class="video-grid">
+        {% for video in videos %}
+        <div class="video-karti" data-video-url="{{ url_for('static', filename=video.url) }}">
+          <video 
+            src="{{ url_for('static', filename=video.url) }}" 
+            {% if video.poster %} poster="{{ url_for('static', filename=video.poster) }}" {% endif %}
+            muted loop 
+            onmouseover="this.play()" 
+            onmouseout="this.pause(); this.currentTime = 0;">
+          </video>
+          <div class="video-info-overlay">
+            <h4>{{ video.title }}</h4>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="video-box" id="videoBox">
+      <span class="kapat" id="kapatBtn">&times;</span>
+      <video id="buyukVideo" controls autoplay></video>
+    </div>
+  </main>
+
+  <script>
+    // --- GARANTİLİ ÇALIŞAN JAVASCRIPT ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoBox = document.getElementById("videoBox");
+        const buyukVideo = document.getElementById("buyukVideo");
+        const kapatBtn = document.getElementById("kapatBtn");
+
+        // Tüm video kartlarını bul ve tıklandığında çalıştır
+        document.querySelectorAll('.video-karti').forEach(kart => {
+            kart.addEventListener('click', function() {
+                const videoUrl = this.getAttribute('data-video-url'); // url_for çıktısını buradan alır
+                
+                if (videoBox && buyukVideo) {
+                    videoBox.style.display = "flex";
+                    buyukVideo.src = videoUrl;
+                    buyukVideo.volume = 0.05; // Ses seviyesi %5
+                    buyukVideo.play();
+                }
+            });
+        });
+
+        // Kapatma fonksiyonu
+        function kapat() {
+            if (buyukVideo) {
+                buyukVideo.pause();
+                buyukVideo.src = "";
+                videoBox.style.display = "none";
+            }
+        }
+
+        if (kapatBtn) kapatBtn.addEventListener('click', kapat);
+        
+        window.onclick = function(event) {
+            if (event.target === videoBox) kapat();
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === "Escape") kapat();
+        });
+    });
+  </script>
+</body>
+</html>

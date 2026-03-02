@@ -1,0 +1,4 @@
+static/assets/img/products/*.mp4
+static/assets/img/videos/*.mp4
+database.db
+__pycache__/

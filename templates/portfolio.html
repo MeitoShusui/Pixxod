@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Portfolio - Pixxod</title>
+
+  <link href="{{ url_for('static', filename='assets/vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/vendor/aos/aos.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/vendor/glightbox/css/glightbox.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='assets/css/main.css') }}" rel="stylesheet">
+
+  <style>
+    body { background-color: #000; }
+    #header { background-color: rgba(0, 0, 0, 0.95) !important; }
+    main { margin-top: 100px; }
+    
+    .portfolio-filters { padding: 0; margin: 0 auto 35px auto; list-style: none; text-align: center; }
+    .portfolio-filters li { cursor: pointer; display: inline-block; padding: 10px 20px; font-size: 14px; font-weight: 600; color: #fff; text-transform: uppercase; transition: 0.3s; }
+    .portfolio-filters li:hover, .portfolio-filters li.filter-active { color: #18d26e; }
+
+    /* Portföy Ögesi Konteynırı */
+    .portfolio-content {
+      position: relative;
+      overflow: hidden;
+      background: transparent !important;
+      cursor: pointer;
+    }
+
+    .portfolio-content img {
+      width: 100%;
+      display: block;
+      transition: 0.5s ease;
+    }
+
+    /* Üzerine gelince resmi hafif karart ve büyüteci göster */
+    .portfolio-content:hover img {
+      filter: brightness(0.5);
+      transform: scale(1.05);
+    }
+
+    /* Tam ortada çıkan büyüteç ikonu */
+    .portfolio-info {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: 0.4s;
+      z-index: 3;
+    }
+
+    .portfolio-content:hover .portfolio-info {
+      opacity: 1;
+    }
+
+    .portfolio-info i {
+      color: #fff;
+      font-size: 40px;
+      transition: 0.3s;
+    }
+
+    .portfolio-info i:hover {
+      color: #18d26e;
+    }
+  </style>
+</head>
+
+<body class="portfolio-page">
+
+  <header id="header" class="header d-flex align-items-center fixed-top">
+    <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
+      <a href="{{ url_for('index') }}" class="logo d-flex align-items-center">
+        <h1 style="color:#fff; font-weight:700; margin:0;">Pixxod</h1>
+      </a>
+      <nav id="navmenu" class="navmenu">
+        <ul>
+          <li><a href="{{ url_for('index') }}">Home</a></li>
+          <li><a href="{{ url_for('about') }}">About</a></li>
+          <li class="dropdown"><a href="#" class="active"><span>Works</span> <i class="bi bi-chevron-down"></i></a>
+            <ul>
+              <li><a href="{{ url_for('portfolio') }}">Photography</a></li>
+              <li><a href="{{ url_for('video_gallery') }}">Video Gallery</a></li>
+            </ul>
+          </li>
+          <li><a href="{{ url_for('contact') }}">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container text-center mb-5" data-aos="fade-up">
+      <h1 style="color: #fff; font-weight: 700;">PHOTOGRAPHY</h1>
+    </div>
+
+    <section id="portfolio" class="portfolio section">
+      <div class="container">
+        <div class="isotope-layout" data-default-filter="*" data-layout="masonry">
+          
+          <ul class="portfolio-filters isotope-filters" data-aos="fade-up">
+            <li data-filter="*" class="filter-active">All</li>
+            {% for cat in categories %}
+            <li data-filter=".filter-{{ cat.name }}">{{ cat.name|capitalize }}</li>
+            {% endfor %}
+          </ul>
+
+          <div class="row gy-4 isotope-container" data-aos="fade-up">
+            {% for photo in photos %}
+            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-{{ photo.category }}">
+              <a href="{{ url_for('static', filename=photo.url) }}" class="glightbox" data-gallery="portfolio-gallery">
+                <div class="portfolio-content">
+                  <img src="{{ url_for('static', filename=photo.url) }}" class="img-fluid" alt="">
+                  <div class="portfolio-info">
+                    <i class="bi bi-zoom-in"></i>
+                  </div>
+                </div>
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/vendor/aos/aos.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/vendor/glightbox/js/glightbox.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/vendor/imagesloaded/imagesloaded.pkgd.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/vendor/isotope-layout/isotope.pkgd.min.js') }}"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      AOS.init();
+
+      // GLightbox Ayarı: Açıklama bloğunu tamamen devre dışı bırakmak için
+      const glightbox = GLightbox({
+        selector: '.glightbox',
+        touchNavigation: true,
+        loop: true,
+        descPosition: 'none' // Alttaki açıklama kısmını kapatır
+      });
+
+      let container = document.querySelector('.isotope-container');
+      if (container) {
+        imagesLoaded(container, function() {
+          let iso = new Isotope(container, {
+            itemSelector: '.isotope-item',
+            layoutMode: 'masonry'
+          });
+
+          document.querySelectorAll('.portfolio-filters li').forEach(btn => {
+            btn.addEventListener('click', function() {
+              document.querySelector('.portfolio-filters .filter-active').classList.remove('filter-active');
+              this.classList.add('filter-active');
+              iso.arrange({ filter: this.getAttribute('data-filter') });
+            });
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
