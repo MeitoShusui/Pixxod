@@ -1,4 +1,16 @@
-static/assets/img/products/*.mp4
-static/assets/img/videos/*.mp4
+# Ağır Medya Klasörleri (Bunlar GitHub'a gitmeyecek)
+static/assets/img/products/
+static/assets/img/videos/
+static/assets/img/portfolio/
+
+# Veritabanı ve Python Dosyaları
 database.db
 __pycache__/
+*.pyc
+venv/
+.env
+.vscode/
+
+# Log ve geçici dosyalar
+*.log
+.DS_Store
